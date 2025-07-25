@@ -1,4 +1,4 @@
-package com.el.event_logger;
+package com.el.eventlogger;
 
 import org.springframework.boot.SpringApplication;
 import org.springframework.boot.autoconfigure.SpringBootApplication;

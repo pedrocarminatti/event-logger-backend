@@ -1,4 +1,4 @@
-package com.el.event_logger;
+package com.el.eventlogger;
 
 import org.junit.jupiter.api.Test;
 import org.springframework.boot.test.context.SpringBootTest;
