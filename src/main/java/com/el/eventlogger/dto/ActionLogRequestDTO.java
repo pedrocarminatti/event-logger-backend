@@ -2,9 +2,17 @@ package com.el.eventlogger.dto;
 
 import jakarta.validation.constraints.NotBlank;
 import jakarta.validation.constraints.NotNull;
+import lombok.Data;
 
-public record ActionLogRequestDTO(
-        @NotBlank String action,
-        @NotBlank String description,
-        @NotNull Long userId
-) {}
+@Data
+public class ActionLogRequestDTO {
+
+    @NotBlank
+    private String action;
+
+    @NotBlank
+    private String description;
+
+    @NotNull
+    private Long userId;
+}

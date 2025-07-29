@@ -1,5 +1,6 @@
 package com.el.eventlogger.service;
 
+import com.el.eventlogger.domain.User;
 import com.el.eventlogger.dto.ActionLogRequestDTO;
 import com.el.eventlogger.dto.ActionLogResponseDTO;
 
@@ -11,4 +12,5 @@ public interface ActionLogService {
     ActionLogResponseDTO findById(Long id);
     ActionLogResponseDTO update(Long id, ActionLogRequestDTO dto);
     void delete(Long id);
+    void log(String action, String description, User user);
 }

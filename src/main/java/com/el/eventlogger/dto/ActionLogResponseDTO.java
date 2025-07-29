@@ -1,13 +1,17 @@
 package com.el.eventlogger.dto;
 
+import lombok.AllArgsConstructor;
+import lombok.Data;
 import java.time.LocalDateTime;
 
-public record ActionLogResponseDTO(
-        Long id,
-        String action,
-        String description,
-        LocalDateTime timestamp,
-        Long userId,
-        String userName,
-        String userEmail
-) {}
+@Data
+@AllArgsConstructor
+public class ActionLogResponseDTO {
+    private Long id;
+    private String action;
+    private String description;
+    private LocalDateTime timestamp;
+    private Long userId;
+    private String userName;
+    private String userEmail;
+}
