@@ -10,6 +10,7 @@ import com.el.eventlogger.service.ActionLogService;
 import com.el.eventlogger.service.UserService;
 import jakarta.persistence.EntityNotFoundException;
 import lombok.extern.slf4j.Slf4j;
+import org.springframework.security.crypto.password.PasswordEncoder;
 import org.springframework.stereotype.Service;
 
 import java.time.LocalDateTime;
@@ -24,18 +25,22 @@ public class UserServiceImpl implements UserService {
     private final UserRepository userRepository;
     private final ActionLogRepository actionLogRepository;
     private final ActionLogService actionLogService;
+    private final PasswordEncoder passwordEncoder;
 
-    public UserServiceImpl(UserRepository userRepository, ActionLogRepository actionLogRepository, ActionLogService actionLogService) {
+    public UserServiceImpl(UserRepository userRepository, ActionLogRepository actionLogRepository, ActionLogService actionLogService, PasswordEncoder passwordEncoder) {
         this.userRepository = userRepository;
         this.actionLogRepository = actionLogRepository;
         this.actionLogService = actionLogService;
+        this.passwordEncoder = passwordEncoder;
     }
 
     @Override
     public UserResponseDTO create(UserRequestDTO dto) {
+
         User user = User.builder()
                 .name(dto.getName())
                 .email(dto.getEmail())
+                .password(passwordEncoder.encode(dto.getPassword()))
                 .createdAt(LocalDateTime.now())
                 .build();
 
