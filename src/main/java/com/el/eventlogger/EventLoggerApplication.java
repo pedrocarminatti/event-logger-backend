@@ -6,8 +6,7 @@ import org.springframework.boot.autoconfigure.SpringBootApplication;
 @SpringBootApplication
 public class EventLoggerApplication {
 
-	public static void main(String[] args) {
-		SpringApplication.run(EventLoggerApplication.class, args);
-	}
-
+  public static void main(String[] args) {
+    SpringApplication.run(EventLoggerApplication.class, args);
+  }
 }

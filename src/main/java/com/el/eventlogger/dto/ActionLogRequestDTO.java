@@ -7,12 +7,9 @@ import lombok.Data;
 @Data
 public class ActionLogRequestDTO {
 
-    @NotBlank
-    private String action;
+  @NotBlank private String action;
 
-    @NotBlank
-    private String description;
+  @NotBlank private String description;
 
-    @NotNull
-    private Long userId;
+  @NotNull private Long userId;
 }

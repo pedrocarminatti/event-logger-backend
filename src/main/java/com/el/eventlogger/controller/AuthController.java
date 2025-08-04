@@ -18,46 +18,52 @@ import org.springframework.web.bind.annotation.RestController;
 @RequestMapping("/api/auth")
 public class AuthController {
 
-    private final UserRepository userRepository;
-    private final PasswordEncoder passwordEncoder;
-    private final JwtTokenProvider jwtTokenProvider;
+  private final UserRepository userRepository;
+  private final PasswordEncoder passwordEncoder;
+  private final JwtTokenProvider jwtTokenProvider;
 
-    public AuthController(UserRepository userRepository, PasswordEncoder passwordEncoder, JwtTokenProvider jwtTokenProvider) {
-        this.userRepository = userRepository;
-        this.passwordEncoder = passwordEncoder;
-        this.jwtTokenProvider = jwtTokenProvider;
+  public AuthController(
+      UserRepository userRepository,
+      PasswordEncoder passwordEncoder,
+      JwtTokenProvider jwtTokenProvider) {
+    this.userRepository = userRepository;
+    this.passwordEncoder = passwordEncoder;
+    this.jwtTokenProvider = jwtTokenProvider;
+  }
+
+  @PostMapping("/signup")
+  public ResponseEntity<LoginResponseDTO> signup(@Valid @RequestBody SignupRequestDTO dto) {
+    if (userRepository.findByEmail(dto.getEmail()).isPresent()) {
+      throw new RuntimeException("Email already registered");
     }
 
-    @PostMapping("/signup")
-    public ResponseEntity<LoginResponseDTO> signup(@Valid @RequestBody SignupRequestDTO dto) {
-        if (userRepository.findByEmail(dto.getEmail()).isPresent()) {
-            throw new RuntimeException("Email already registered");
-        }
+    User user =
+        User.builder()
+            .name(dto.getName())
+            .email(dto.getEmail())
+            .password(passwordEncoder.encode(dto.getPassword()))
+            .build();
 
-        User user = User.builder()
-                .name(dto.getName())
-                .email(dto.getEmail())
-                .password(passwordEncoder.encode(dto.getPassword()))
-                .build();
+    userRepository.save(user);
 
-        userRepository.save(user);
+    String token = jwtTokenProvider.generateToken(user.getEmail());
 
-        String token = jwtTokenProvider.generateToken(user.getEmail());
+    return ResponseEntity.ok(new LoginResponseDTO(token, user.getEmail()));
+  }
 
-        return ResponseEntity.ok(new LoginResponseDTO(token, user.getEmail()));
+  @PostMapping("/login")
+  public ResponseEntity<LoginResponseDTO> login(@Valid @RequestBody LoginRequestDTO dto) {
+    User user =
+        userRepository
+            .findByEmail(dto.getEmail())
+            .orElseThrow(() -> new RuntimeException("Invalid email or password"));
+
+    if (!passwordEncoder.matches(dto.getPassword(), user.getPassword())) {
+      throw new RuntimeException("Invalid email or password");
     }
 
-    @PostMapping("/login")
-    public ResponseEntity<LoginResponseDTO> login(@Valid @RequestBody LoginRequestDTO dto) {
-        User user = userRepository.findByEmail(dto.getEmail())
-                .orElseThrow(() -> new RuntimeException("Invalid email or password"));
+    String token = jwtTokenProvider.generateToken(user.getEmail());
 
-        if (!passwordEncoder.matches(dto.getPassword(), user.getPassword())) {
-            throw new RuntimeException("Invalid email or password");
-        }
-
-        String token = jwtTokenProvider.generateToken(user.getEmail());
-
-        return ResponseEntity.ok(new LoginResponseDTO(token, user.getEmail()));
-    }
+    return ResponseEntity.ok(new LoginResponseDTO(token, user.getEmail()));
+  }
 }
