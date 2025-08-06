@@ -1,18 +1,15 @@
 package com.el.eventlogger.controller;
 
 import com.el.eventlogger.domain.User;
-import com.el.eventlogger.dto.LoginRequestDTO;
-import com.el.eventlogger.dto.LoginResponseDTO;
-import com.el.eventlogger.dto.SignupRequestDTO;
+import com.el.eventlogger.dto.*;
+import com.el.eventlogger.exception.BadRequestException;
 import com.el.eventlogger.repository.UserRepository;
 import com.el.eventlogger.security.JwtTokenProvider;
 import jakarta.validation.Valid;
+import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
 import org.springframework.security.crypto.password.PasswordEncoder;
-import org.springframework.web.bind.annotation.PostMapping;
-import org.springframework.web.bind.annotation.RequestBody;
-import org.springframework.web.bind.annotation.RequestMapping;
-import org.springframework.web.bind.annotation.RestController;
+import org.springframework.web.bind.annotation.*;
 
 @RestController
 @RequestMapping("/api/auth")
@@ -32,9 +29,10 @@ public class AuthController {
   }
 
   @PostMapping("/signup")
-  public ResponseEntity<LoginResponseDTO> signup(@Valid @RequestBody SignupRequestDTO dto) {
+  public ResponseEntity<ApiResponse<LoginResponseDTO>> signup(
+      @Valid @RequestBody SignupRequestDTO dto) {
     if (userRepository.findByEmail(dto.getEmail()).isPresent()) {
-      throw new RuntimeException("Email already registered");
+      throw new BadRequestException("Email already registered");
     }
 
     User user =
@@ -47,23 +45,27 @@ public class AuthController {
     userRepository.save(user);
 
     String token = jwtTokenProvider.generateToken(user.getEmail());
+    LoginResponseDTO response = new LoginResponseDTO(token, user.getEmail());
 
-    return ResponseEntity.ok(new LoginResponseDTO(token, user.getEmail()));
+    return ResponseEntity.status(HttpStatus.CREATED)
+        .body(ApiResponse.success("Signup successful", response));
   }
 
   @PostMapping("/login")
-  public ResponseEntity<LoginResponseDTO> login(@Valid @RequestBody LoginRequestDTO dto) {
+  public ResponseEntity<ApiResponse<LoginResponseDTO>> login(
+      @Valid @RequestBody LoginRequestDTO dto) {
     User user =
         userRepository
             .findByEmail(dto.getEmail())
-            .orElseThrow(() -> new RuntimeException("Invalid email or password"));
+            .orElseThrow(() -> new BadRequestException("Invalid email or password"));
 
     if (!passwordEncoder.matches(dto.getPassword(), user.getPassword())) {
-      throw new RuntimeException("Invalid email or password");
+      throw new BadRequestException("Invalid email or password");
     }
 
     String token = jwtTokenProvider.generateToken(user.getEmail());
+    LoginResponseDTO response = new LoginResponseDTO(token, user.getEmail());
 
-    return ResponseEntity.ok(new LoginResponseDTO(token, user.getEmail()));
+    return ResponseEntity.ok(ApiResponse.success("Login successful", response));
   }
 }

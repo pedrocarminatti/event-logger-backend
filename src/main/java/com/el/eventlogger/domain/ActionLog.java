@@ -22,7 +22,7 @@ public class ActionLog {
 
   private LocalDateTime timestamp;
 
-  @ManyToOne(fetch = FetchType.LAZY)
+  @ManyToOne(fetch = FetchType.LAZY, optional = true)
   @JoinColumn(name = "user_id", nullable = true)
   private User user;
 }

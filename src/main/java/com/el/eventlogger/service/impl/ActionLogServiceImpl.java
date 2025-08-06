@@ -4,6 +4,7 @@ import com.el.eventlogger.domain.ActionLog;
 import com.el.eventlogger.domain.User;
 import com.el.eventlogger.dto.ActionLogRequestDTO;
 import com.el.eventlogger.dto.ActionLogResponseDTO;
+import com.el.eventlogger.mapper.ActionLogMapper;
 import com.el.eventlogger.repository.ActionLogRepository;
 import com.el.eventlogger.repository.UserRepository;
 import com.el.eventlogger.service.ActionLogService;
@@ -115,13 +116,6 @@ public class ActionLogServiceImpl implements ActionLogService {
   }
 
   private ActionLogResponseDTO mapToDTO(ActionLog log) {
-    return new ActionLogResponseDTO(
-        log.getId(),
-        log.getAction(),
-        log.getDescription(),
-        log.getTimestamp(),
-        log.getUser().getId(),
-        log.getUser().getName(),
-        log.getUser().getEmail());
+    return ActionLogMapper.toDTO(log);
   }
 }
