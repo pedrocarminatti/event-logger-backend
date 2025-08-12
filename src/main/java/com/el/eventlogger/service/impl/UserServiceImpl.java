@@ -4,16 +4,18 @@ import com.el.eventlogger.domain.ActionLog;
 import com.el.eventlogger.domain.User;
 import com.el.eventlogger.dto.UserRequestDTO;
 import com.el.eventlogger.dto.UserResponseDTO;
+import com.el.eventlogger.kafka.KafkaProducerService;
 import com.el.eventlogger.repository.ActionLogRepository;
 import com.el.eventlogger.repository.UserRepository;
 import com.el.eventlogger.service.ActionLogService;
 import com.el.eventlogger.service.UserService;
 import jakarta.persistence.EntityNotFoundException;
-import java.time.LocalDateTime;
-import java.util.List;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.security.crypto.password.PasswordEncoder;
 import org.springframework.stereotype.Service;
+
+import java.time.LocalDateTime;
+import java.util.List;
 
 @Slf4j
 @Service
@@ -25,32 +27,37 @@ public class UserServiceImpl implements UserService {
   private final ActionLogRepository actionLogRepository;
   private final ActionLogService actionLogService;
   private final PasswordEncoder passwordEncoder;
+  private final KafkaProducerService kafkaProducerService;
 
   public UserServiceImpl(
-      UserRepository userRepository,
-      ActionLogRepository actionLogRepository,
-      ActionLogService actionLogService,
-      PasswordEncoder passwordEncoder) {
+          UserRepository userRepository,
+          ActionLogRepository actionLogRepository,
+          ActionLogService actionLogService,
+          PasswordEncoder passwordEncoder, KafkaProducerService kafkaProducerService) {
     this.userRepository = userRepository;
     this.actionLogRepository = actionLogRepository;
     this.actionLogService = actionLogService;
     this.passwordEncoder = passwordEncoder;
+      this.kafkaProducerService = kafkaProducerService;
   }
 
   @Override
   public UserResponseDTO create(UserRequestDTO dto) {
-
     User user =
-        User.builder()
-            .name(dto.getName())
-            .email(dto.getEmail())
-            .password(passwordEncoder.encode(dto.getPassword()))
-            .createdAt(LocalDateTime.now())
-            .build();
+            User.builder()
+                    .name(dto.getName())
+                    .email(dto.getEmail())
+                    .password(passwordEncoder.encode(dto.getPassword()))
+                    .createdAt(LocalDateTime.now())
+                    .build();
 
     User saved = userRepository.save(user);
     log.info("[USER] Created user: {}", saved.getEmail());
     actionLogService.log("CREATE_USER", "User created: " + saved.getEmail(), saved);
+
+    String eventJson = String.format(
+            "{\"eventType\":\"UserCreated\",\"userId\":%d,\"email\":\"%s\"}", saved.getId(), saved.getEmail());
+    kafkaProducerService.sendMessage(eventJson);
 
     return mapToDTO(saved);
   }
@@ -82,10 +89,7 @@ public class UserServiceImpl implements UserService {
 
   @Override
   public UserResponseDTO update(Long id, UserRequestDTO dto) {
-    User user =
-        userRepository
-            .findById(id)
-            .orElseThrow(() -> new EntityNotFoundException(USER_NOT_FOUND + id));
+    User user = userRepository.findById(id).orElseThrow(() -> new EntityNotFoundException(USER_NOT_FOUND + id));
 
     user.setName(dto.getName());
     user.setEmail(dto.getEmail());
@@ -94,18 +98,19 @@ public class UserServiceImpl implements UserService {
     log.info("[USER] Updated user: {}", updated.getEmail());
     actionLogService.log("UPDATE_USER", "Updated user: " + updated.getEmail(), updated);
 
+    String eventJson = String.format(
+            "{\"eventType\":\"UserUpdated\",\"userId\":%d,\"email\":\"%s\"}", updated.getId(), updated.getEmail());
+    kafkaProducerService.sendMessage(eventJson);
+
     return mapToDTO(updated);
   }
 
   @Override
   public void delete(Long id) {
-    User user =
-        userRepository
-            .findById(id)
-            .orElseThrow(() -> new EntityNotFoundException(USER_NOT_FOUND + id));
+    User user = userRepository.findById(id).orElseThrow(() -> new EntityNotFoundException(USER_NOT_FOUND + id));
 
     actionLogService.log(
-        "DELETE_USER", "Deleted user with ID: " + id + " (Name: " + user.getName() + ")", user);
+            "DELETE_USER", "Deleted user with ID: " + id + " (Name: " + user.getName() + ")", user);
 
     List<ActionLog> logs = actionLogRepository.findByUser(user);
     if (!logs.isEmpty()) {
@@ -116,7 +121,12 @@ public class UserServiceImpl implements UserService {
     userRepository.delete(user);
 
     log.info("Deleted user: {}", id);
+
+    String eventJson = String.format(
+            "{\"eventType\":\"UserDeleted\",\"userId\":%d,\"email\":\"%s\"}", id, user.getEmail());
+    kafkaProducerService.sendMessage(eventJson);
   }
+
 
   private UserResponseDTO mapToDTO(User user) {
     return new UserResponseDTO(user.getId(), user.getName(), user.getEmail(), user.getCreatedAt());

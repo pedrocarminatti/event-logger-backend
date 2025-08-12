@@ -4,6 +4,7 @@ import com.el.eventlogger.domain.ActionLog;
 import com.el.eventlogger.domain.User;
 import com.el.eventlogger.dto.ActionLogRequestDTO;
 import com.el.eventlogger.dto.ActionLogResponseDTO;
+import com.el.eventlogger.kafka.KafkaProducerService;
 import com.el.eventlogger.mapper.ActionLogMapper;
 import com.el.eventlogger.repository.ActionLogRepository;
 import com.el.eventlogger.repository.UserRepository;
@@ -23,11 +24,13 @@ public class ActionLogServiceImpl implements ActionLogService {
 
   private final ActionLogRepository actionLogRepository;
   private final UserRepository userRepository;
+  private final KafkaProducerService kafkaProducerService;
 
   public ActionLogServiceImpl(
-      ActionLogRepository actionLogRepository, UserRepository userRepository) {
+          ActionLogRepository actionLogRepository, UserRepository userRepository, KafkaProducerService kafkaProducerService) {
     this.actionLogRepository = actionLogRepository;
     this.userRepository = userRepository;
+      this.kafkaProducerService = kafkaProducerService;
   }
 
   @Override
@@ -104,15 +107,22 @@ public class ActionLogServiceImpl implements ActionLogService {
   @Override
   public void log(String action, String description, User user) {
     ActionLog actionLog =
-        ActionLog.builder()
-            .action(action)
-            .description(description)
-            .timestamp(LocalDateTime.now())
-            .user(user)
-            .build();
+            ActionLog.builder()
+                    .action(action)
+                    .description(description)
+                    .timestamp(LocalDateTime.now())
+                    .user(user)
+                    .build();
 
     actionLogRepository.save(actionLog);
     log.info("[ACTION_LOG] {} - {}", action, description);
+
+    try {
+      String eventJson = ActionLogMapper.toJson(actionLog);
+      kafkaProducerService.sendMessage(eventJson);
+    } catch (Exception e) {
+      log.error("Failed to send action log event to Kafka", e);
+    }
   }
 
   private ActionLogResponseDTO mapToDTO(ActionLog log) {
